@@ -20,13 +20,11 @@ async def getArtistsList():
 
 @router.get("/api/v1/search-artists")
 async def search_artists(name: Optional[str] = None):
-
+    if name == None:
+        raise HTTPException(status_code=404, detail="Pleasew enter name")
     artists = ArtistTable.objects(name__icontains=name)
-
     if not artists:
         raise HTTPException(status_code=404, detail="No artists found matching the criteria")
-
-    # Convert data to JSON
     tojson = artists.to_json()
     fromjson = json.loads(tojson)
 
