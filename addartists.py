@@ -21,10 +21,11 @@ client_credentials_manager = SpotifyClientCredentials(
 )
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
-# Function to get all types of Hollywood artists and save to DB
-def get_all_hollywood_artists_and_save_to_db(limit=50):
-    # Search for Hollywood genre artists across all types of music (no specific genre filter)
-    results = sp.search(q="genre:hollywood", type="artist", limit=limit)
+# Function to get all Bengali artists and save to DB
+def get_all_bengali_artists_and_save_to_db(limit=50):
+    # Search for Bengali genre artists across all types of music
+    results = sp.search(q="genre:bengali", type="artist", limit=limit)  # Looking for Bengali genre artists
+    print(results)
     artists = results['artists']['items']
     
     for artist in artists:
@@ -41,5 +42,5 @@ def get_all_hollywood_artists_and_save_to_db(limit=50):
         artist_doc.save()
         print(f"Saved {artist_name} to the database.")
 
-# Example: Fetch and save all Hollywood artists to the database
-get_all_hollywood_artists_and_save_to_db()
+# Example: Fetch and save all Bengali artists to the database
+get_all_bengali_artists_and_save_to_db()
