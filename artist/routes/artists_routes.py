@@ -3,10 +3,11 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 
 from artist.models.artist_models import ArtistTable
+from config.midlware_routes import MIDLWARE
 
 router = APIRouter()
 
-@router.get('/api/v1/artists-list')
+@router.get(f'{MIDLWARE}/artists-list')
 async def getArtistsList():
     data = ArtistTable.objects.all()
     tojson = data.to_json()
@@ -18,7 +19,7 @@ async def getArtistsList():
     }
 
 
-@router.get("/api/v1/search-artists")
+@router.get(f"{MIDLWARE}/search-artists")
 async def search_artists(name: Optional[str] = None):
     if name == None:
         raise HTTPException(status_code=404, detail="Pleasew enter name")
