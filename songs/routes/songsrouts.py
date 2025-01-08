@@ -98,7 +98,7 @@ def song_to_pydantic(song):
         played=song.played,
 
     )
-@router.get("/recommend_songs/{userid}", response_model=List[SongRecommendation])
+@router.get("/api/v1/recommend_songs/{userid}", response_model=List[SongRecommendation])
 def recommend_songs(userid: str, limit: int = 5):
     """
     Recommend songs based on the user's recent play history.
