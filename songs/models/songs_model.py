@@ -1,5 +1,6 @@
 from mongoengine import Document, StringField, IntField, ListField
 from pydantic import BaseModel
+from typing import List
 class SongTable(Document):
     artistsIDs = StringField(required=True)
     album_name = StringField(required=True)
@@ -15,3 +16,13 @@ class SongCreateModel(BaseModel):
     artistsIDs : list
     title : str
     genrie_type : str
+
+class SongRecommendation(BaseModel):
+    artistsIDs: str
+    album_name: str
+    image: str
+    title: str
+    genrie_type: List[str]
+    track_url: str
+    like: List[str]
+    played: int

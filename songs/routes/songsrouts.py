@@ -1,10 +1,14 @@
 # API to search songs with pagination
-from typing import Optional
+import json
+from typing import List, Optional
 
-from fastapi import APIRouter, Query
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, Query
 
 from config.midlware_routes import MIDLWARE
-from songs.models.songs_model import SongTable
+from songs.models.songs_model import SongRecommendation, SongTable
+from track.models.track_model import TrackTable
+from userhestory.models.usershistory import UserHistoryTable
 router = APIRouter()
 
 @router.get(f"{MIDLWARE}/songs/")
@@ -36,7 +40,8 @@ def search_songs(
         "total_songs": total_songs,
         "total_pages": (total_songs + page_size - 1) // page_size,  # total pages calculation
         "songs": [
-            {
+            {   
+                "_id": str(song.id),
                 "artistsIDs": song.artistsIDs,
                 "album_name": song.album_name,
                 "image": song.image,
@@ -45,7 +50,85 @@ def search_songs(
                 "track_url": song.track_url,
                 "like": song.like,
                 "played": song.played,
-                "lyrics": song.lyrics
+                "lyrics": song.lyrics,
+                "track": json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())[0]
             } for song in songs
-        ]
+        ],
+        "status": 200
     }
+
+@router.get(f"{MIDLWARE}/update-played/song/{id}")
+async def updatePlayedSong(id:str):
+    findata = SongTable.objects.get(id=ObjectId(str(id)))
+    findata.played = findata.played + 1
+    findata.save()
+    return {
+        "message": "Song played updated",
+        "status": 200
+    }
+
+@router.get(f"{MIDLWARE}/update-played/song/")
+async def updateLikeSong(songid:str,userid:str ):
+    findata = SongTable.objects.get(id=ObjectId(str(songid)))
+    findata.like.append(userid)
+    findata.save()
+    return {
+        "message": "Thank you for giveing me a like",
+        "status": 200
+    }
+
+@router.get(f"{MIDLWARE}/add-song/user-history")
+async def addSongUserHistory(userid: str, songid:str):
+    sondata = SongTable.objects.get(id=ObjectId(songid))
+    savedata = UserHistoryTable(userid=userid,songData=sondata)
+    savedata.save()
+    return {
+        "message": "History update",
+        "status": 200
+    }
+def song_to_pydantic(song):
+    return SongRecommendation(
+        artistsIDs=song.artistsIDs,
+        album_name=song.album_name,
+        image=song.image,
+        title=song.title,
+        genrie_type=song.genrie_type,
+        track_url=song.track_url,
+        like=song.like,
+        played=song.played,
+
+    )
+@router.get("/recommend_songs/{userid}", response_model=List[SongRecommendation])
+def recommend_songs(userid: str, limit: int = 5):
+    """
+    Recommend songs based on the user's recent play history.
+    Fetches recent songs the user has listened to and recommends similar songs.
+    """
+    try:
+        # Get the user's song history from UserHistoryTable
+        user_history = UserHistoryTable.objects(userid=userid).order_by('-id').limit(limit)
+        
+        if not user_history:
+            raise HTTPException(status_code=404, detail="No history found for this user")
+
+        # Collect all songs the user has played recently
+        recent_songs = [entry.songData for entry in user_history]
+
+        # Get the IDs of recent songs to exclude from recommendations
+        recent_song_ids = [song.id for song in recent_songs]
+
+        # Fetch more songs based on the genre or artist of the recent songs
+        recommendations = SongTable.objects(
+            artistsIDs__in=[song.artistsIDs for song in recent_songs],  # Match by artist
+            genrie_type__in=[genre for song in recent_songs for genre in song.genrie_type]  # Match by genre
+        ).filter(id__nin=recent_song_ids)  # Exclude already played songs
+
+        # Limit the number of recommendations
+        recommendations = recommendations[:limit]
+
+        # Convert to Pydantic models for response
+        response = [song_to_pydantic(song) for song in recommendations]
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

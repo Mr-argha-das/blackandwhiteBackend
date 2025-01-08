@@ -1,1 +1,1 @@
-MIDLWARE = "api/v1"
+MIDLWARE = "/api/v1"
