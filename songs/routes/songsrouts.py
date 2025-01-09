@@ -1,10 +1,12 @@
 # API to search songs with pagination
 import json
+import random
 from typing import List, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Query
 
+from artist.models.artist_models import ArtistTable
 from config.midlware_routes import MIDLWARE
 from songs.models.songs_model import SongRecommendation, SongTable
 from track.models.track_model import TrackTable
@@ -33,27 +35,34 @@ def search_songs(
     songs = SongTable.objects(**query).skip(skip).limit(page_size)
     total_songs = SongTable.objects(**query).count()
     
+    # Shuffle the songs randomly
+    song_list = [
+        {   
+            "_id": str(song.id),
+            "artistsIDs": song.artistsIDs,
+            "artists": json.loads(ArtistTable.objects.get(id=ObjectId(song.artistsIDs)).to_json()),
+            "album_name": song.album_name,
+            "image": song.image,
+            "title": song.title,
+            "genrie_type": song.genrie_type,
+            "track_url": song.track_url,
+            "like": song.like,
+            "played": song.played,
+            "lyrics": song.lyrics,
+            "track": json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())[0]
+        } for song in songs
+    ]
+    
+    # Randomly shuffle the song list
+    random.shuffle(song_list)
+    
     # Prepare response data
     return {
         "page": page,
         "page_size": page_size,
         "total_songs": total_songs,
         "total_pages": (total_songs + page_size - 1) // page_size,  # total pages calculation
-        "songs": [
-            {   
-                "_id": str(song.id),
-                "artistsIDs": song.artistsIDs,
-                "album_name": song.album_name,
-                "image": song.image,
-                "title": song.title,
-                "genrie_type": song.genrie_type,
-                "track_url": song.track_url,
-                "like": song.like,
-                "played": song.played,
-                "lyrics": song.lyrics,
-                "track": json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())[0]
-            } for song in songs
-        ],
+        "songs": song_list,
         "status": 200
     }
 
@@ -132,3 +141,22 @@ def recommend_songs(userid: str, limit: int = 5):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/shuffle_songs/")
+async def shuffle_songs():
+    # Fetch all songs from the database
+    songs = SongTable.objects.all()
+    
+    # Shuffle the songs list in place
+    shuffled_songs = list(songs)
+    random.shuffle(shuffled_songs)
+    
+    # Save the shuffled order back to the database
+    for idx, song in enumerate(shuffled_songs):
+        # Optionally, if you have a 'position' or 'order' field, you can update that field
+        # song.update(set__position=idx)
+        
+        # If you don't need to update specific fields, simply save it back
+        song.save()
+    
+    return {"message": "Songs shuffled and saved successfully.", "status": 200}
