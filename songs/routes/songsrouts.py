@@ -1,5 +1,6 @@
 # API to search songs with pagination
 import json
+import math
 import random
 from typing import List, Optional
 
@@ -162,19 +163,52 @@ async def shuffle_songs():
     return {"message": "Songs shuffled and saved successfully.", "status": 200}
 
 @router.get(f"{MIDLWARE}/random-songs")
-async def randomSongs():
-    songsList = [ ]
+async def randomSongs(page: int = 1, limit: int = 10):
+    songsList = []
+    
+    # Fetch all songs
     songs = SongTable.objects.all()
-    for song in songs:
+    
+    # Ensure the page and limit are valid
+    if page < 1:
+        raise HTTPException(status_code=400, detail="Page must be greater than or equal to 1")
+    if limit < 1:
+        raise HTTPException(status_code=400, detail="Limit must be greater than or equal to 1")
+    
+    # Calculate the starting index and ending index for pagination
+    start_index = (page - 1) * limit
+    end_index = start_index + limit
+
+    # If there are more songs than the current page + limit, shuffle the list
+    shuffled_songs = list(songs)  # Convert to list so we can shuffle
+    random.shuffle(shuffled_songs)
+    
+    # Slice the list based on the page and limit
+    paginated_songs = shuffled_songs[start_index:end_index]
+    
+    # Fetch data for each song
+    for song in paginated_songs:
         artists = json.loads(ArtistTable.objects.get(id=ObjectId(song.artistsIDs)).to_json())
         track = json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())
         songsList.append({
             "song": json.loads(song.to_json()),
-            "artist":artists,
+            "artist": artists,
             "track": track
         })
+    
+    # Calculate the total number of pages
+    total_songs = len(songs)
+    total_pages = math.ceil(total_songs / limit)
+    
+    # Return response with pagination metadata
     return {
         "message": "Here is data",
         "data": songsList,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_songs": total_songs,
+            "total_pages": total_pages
+        },
         "status": 200
     }
