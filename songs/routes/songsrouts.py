@@ -160,3 +160,21 @@ async def shuffle_songs():
         song.save()
     
     return {"message": "Songs shuffled and saved successfully.", "status": 200}
+
+@router.get(f"{MIDLWARE}/random-songs")
+async def randomSongs():
+    songsList = [ ]
+    songs = SongTable.objects.all()
+    for song in songs:
+        artists = json.loads(ArtistTable.objects.get(id=ObjectId(song.artistsIDs)).to_json())
+        track = json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())
+        songsList.append({
+            "song": json.loads(song.to_json()),
+            "artist":artists,
+            "track": track
+        })
+    return {
+        "message": "Here is data",
+        "data": songsList,
+        "status": 200
+    }
