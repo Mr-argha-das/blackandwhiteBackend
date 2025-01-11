@@ -1,7 +1,8 @@
 import json
 import random
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from artist.models.artist_models import ArtistTable
 from config.midlware_routes import MIDLWARE
@@ -53,3 +54,25 @@ async def search_artists(name: Optional[str] = None):
         "data": fromjson,
         "status": 200
     }
+
+class Artist(BaseModel):
+    image: str
+    name: str
+    genre_type: str
+
+    class Config:
+        orm_mode = True
+        
+@router.get(f"{MIDLWARE}/genres")
+async def get_genres():
+    try:
+        genres = set(artist.genre_type for artist in ArtistTable.objects())  # Extract unique genre types
+        unique_genres = set()
+        for genre_list in genres:
+            unique_genres.update(genre_list.split(", "))  # Split and collect unique genres
+        return {
+            "data":sorted(unique_genres),
+            "status": 200
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching genres: {str(e)}")
