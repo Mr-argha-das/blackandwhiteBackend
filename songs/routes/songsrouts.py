@@ -96,19 +96,8 @@ async def addSongUserHistory(userid: str, songid:str):
         "message": "History update",
         "status": 200
     }
-def song_to_pydantic(song):
-    return SongRecommendation(
-        artistsIDs=song.artistsIDs,
-        album_name=song.album_name,
-        image=song.image,
-        title=song.title,
-        genrie_type=song.genrie_type,
-        track_url=song.track_url,
-        like=song.like,
-        played=song.played,
 
-    )
-@router.get("/api/v1/recommend_songs/{userid}", response_model=List[SongRecommendation])
+@router.get("/api/v1/recommend_songs/{userid}")
 def recommend_songs(userid: str, limit: int = 5):
     """
     Recommend songs based on the user's recent play history.
@@ -146,10 +135,14 @@ def recommend_songs(userid: str, limit: int = 5):
         "track_url":song.track_url,
         "like":song.like,
         "played":song.played,
-        "artist" : json.loads(ArtistTable.objects.get(id=ObjectId(song.artistsIDs)).to_json()),
+        "artist" : json.loads(ArtistTable.objects.get(id=ObjectId(str(song.artistsIDs))).to_json()),
         "track": json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())
             } for song in recommendations]
-        return response
+        return {
+            "message": "Song For you",
+            "data":response,
+            "status": 200
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
