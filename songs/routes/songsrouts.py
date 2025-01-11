@@ -137,7 +137,18 @@ def recommend_songs(userid: str, limit: int = 5):
         recommendations = recommendations[:limit]
 
         # Convert to Pydantic models for response
-        response = [song_to_pydantic(song) for song in recommendations]
+        response = [{
+            "artistsIDs":song.artistsIDs,
+        "album_name":song.album_name,
+        "image":song.image,
+        "title":song.title,
+        "genrie_type":song.genrie_type,
+        "track_url":song.track_url,
+        "like":song.like,
+        "played":song.played,
+        "artist" : json.loads(ArtistTable.objects.get(id=ObjectId(song.artistsIDs)).to_json()),
+        "track": json.loads(TrackTable.objects(songId=str(ObjectId(song.id))).to_json())
+            } for song in recommendations]
         return response
 
     except Exception as e:
