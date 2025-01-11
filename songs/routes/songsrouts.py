@@ -216,3 +216,27 @@ async def randomSongs(page: int = 1, limit: int = 10):
         },
         "status": 200
     }
+    
+    
+@router.get(f"{MIDLWARE}/user-song-history")
+async def userSongHistory(userid: str):
+    historyList = []
+    data = UserHistoryTable.objects(userid=userid).all()
+    for song in data:
+        historyList.append(
+            {
+                "alubum_name": song.songData.album_name,
+                "image": song.songData.image,
+                "title":song.songData.title,
+                "like": song.songData.like,
+                "played": song.songData.played,
+                "artist": json.loads(ArtistTable.objects.get(id=ObjectId(song.songData.artistsIDs)).to_json()),
+                "track": json.loads(TrackTable.objects(songId=str(ObjectId(song.songData.id))).to_json())
+            }
+            
+        )
+    return {
+        "message":"User history data",
+        "data": historyList,
+        "status": 200
+    }
