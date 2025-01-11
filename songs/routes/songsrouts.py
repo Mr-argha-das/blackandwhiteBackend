@@ -224,7 +224,7 @@ async def userSongHistory(userid: str):
     data = UserHistoryTable.objects(userid=userid).all()
     for song in data:
         historyList.append(
-            {
+            {   "id": song.songData.id,
                 "alubum_name": song.songData.album_name,
                 "image": song.songData.image,
                 "title":song.songData.title,
